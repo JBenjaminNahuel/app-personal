@@ -93,7 +93,8 @@ function generarSemana(){
   cont.innerHTML = "";
 
   const inicio = new Date(fechaBase);
-  inicio.setDate(inicio.getDate() - inicio.getDay() + 1);
+const dia = inicio.getDay() === 0 ? 7 : inicio.getDay();
+inicio.setDate(inicio.getDate() - dia + 1);
 
   let fin = new Date(inicio);
   fin.setDate(inicio.getDate()+6);
