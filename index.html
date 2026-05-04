@@ -3,18 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agenda Semanal PRO</title>
+<title>Agenda Semanal PRO FINAL</title>
 <style>
 body{font-family:Arial;background:#0f172a;color:white;margin:0}
 .container{width:90%;margin:auto;padding:10px}
 .card{background:#1e293b;padding:10px;border-radius:15px;margin-bottom:10px}
 .headerSemana{text-align:center;margin-bottom:10px;font-weight:bold}
-.week{display:flex;justify-content:space-between;gap:5px}
+.week{display:flex;gap:5px}
 .day{background:#334155;padding:8px;border-radius:10px;flex:1;text-align:center;cursor:pointer}
 .day.selected{background:#22c55e}
 .nombreDia{font-size:10px;color:#94a3b8}
 .numeroDia{font-size:16px;font-weight:bold}
 .event{font-size:10px;margin-top:4px;padding:4px;border-radius:5px}
+.event.selected{outline:2px solid red}
 button{padding:8px;border:none;border-radius:8px;background:#22c55e;color:white}
 .nav{display:flex;justify-content:space-between;margin-bottom:10px}
 input,select{width:100%;padding:10px;margin:5px 0;border:none;border-radius:8px}
@@ -37,11 +38,22 @@ input,select{width:100%;padding:10px;margin:5px 0;border:none;border-radius:8px}
   <h3>➕ Evento</h3>
   <input type="time" id="hora">
   <input type="text" id="titulo" placeholder="Evento">
+  <select id="categoria">
+    <option value="gym">Gym</option>
+    <option value="estudio">Estudio</option>
+    <option value="trabajo">Trabajo</option>
+    <option value="otro">Otro</option>
+  </select>
   <select id="tipo">
     <option value="unico">Único</option>
     <option value="semanal">Semanal</option>
+    <option value="diario">Diario</option>
   </select>
   <button onclick="agregarEvento()">Guardar</button>
+</div>
+
+<div class="card">
+  <button onclick="eliminarSeleccionados()" style="background:red;width:100%">Eliminar seleccionados</button>
 </div>
 
 </div>
@@ -49,7 +61,15 @@ input,select{width:100%;padding:10px;margin:5px 0;border:none;border-radius:8px}
 <script>
 let eventos = JSON.parse(localStorage.getItem('eventos')) || [];
 let fechaBase = new Date();
-let diaSeleccionado = null;
+let diasSeleccionados = [];
+let eventosSeleccionados = [];
+
+const colores = {
+  gym:'#22c55e',
+  estudio:'#3b82f6',
+  trabajo:'#eab308',
+  otro:'#a855f7'
+};
 
 const dias = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 
@@ -87,9 +107,13 @@ function generarSemana(){
     `;
 
     div.onclick = ()=>{
-      document.querySelectorAll('.day').forEach(x=>x.classList.remove('selected'));
-      div.classList.add('selected');
-      diaSeleccionado = fecha;
+      if(diasSeleccionados.includes(fecha)){
+        diasSeleccionados = diasSeleccionados.filter(f=>f!==fecha);
+        div.classList.remove('selected');
+      }else{
+        diasSeleccionados.push(fecha);
+        div.classList.add('selected');
+      }
     }
 
     cont.appendChild(div);
@@ -109,21 +133,23 @@ function irHoy(){
 }
 
 function agregarEvento(){
-  if(!diaSeleccionado) return alert("Elegí un día");
-
   const hora = document.getElementById('hora').value;
   const titulo = document.getElementById('titulo').value;
   const tipo = document.getElementById('tipo').value;
+  const categoria = document.getElementById('categoria').value;
 
-  if(!hora || !titulo) return alert("Completá todo");
+  if(diasSeleccionados.length===0) return alert("Elegí días");
 
-  const partes = diaSeleccionado.split('-');
-  const d = new Date(partes[0], partes[1]-1, partes[2]);
-  const diaSemana = d.getDay();
+  diasSeleccionados.forEach(fecha=>{
+    const partes = fecha.split('-');
+    const d = new Date(partes[0], partes[1]-1, partes[2]);
+    const diaSemana = d.getDay();
 
-  eventos.push({fecha: diaSeleccionado, hora, titulo, tipo, diaSemana});
+    eventos.push({fecha, hora, titulo, tipo, categoria, diaSemana});
+  });
 
   localStorage.setItem('eventos', JSON.stringify(eventos));
+  diasSeleccionados=[];
   generarSemana();
 }
 
@@ -138,16 +164,25 @@ function mostrarEventos(){
   eventos.forEach((e,i)=>{
     if(e.tipo==='unico'){
       if(!mapa[e.fecha]) mapa[e.fecha]=[];
-      mapa[e.fecha].push(e);
+      mapa[e.fecha].push({...e,i});
     }
 
     if(e.tipo==='semanal'){
       const d = new Date(inicio);
       d.setDate(inicio.getDate() + (e.diaSemana===0?6:e.diaSemana-1));
       const f = formatearFecha(d);
-
       if(!mapa[f]) mapa[f]=[];
-      mapa[f].push(e);
+      mapa[f].push({...e,i});
+    }
+
+    if(e.tipo==='diario'){
+      for(let j=0;j<7;j++){
+        const d = new Date(inicio);
+        d.setDate(inicio.getDate()+j);
+        const f = formatearFecha(d);
+        if(!mapa[f]) mapa[f]=[];
+        mapa[f].push({...e,i});
+      }
     }
   });
 
@@ -156,14 +191,31 @@ function mostrarEventos(){
 
     const box = document.getElementById('e'+fecha);
     if(box){
-      mapa[fecha].forEach(e=>{
-        box.innerHTML += `<div class="event">${e.hora} ${e.titulo}</div>`;
+      mapa[fecha].forEach(ev=>{
+        box.innerHTML += `<div class="event ${eventosSeleccionados.includes(ev.i)?'selected':''}" style="background:${colores[ev.categoria]}" onclick="toggleEvento(${ev.i},event)">${ev.hora} ${ev.titulo}</div>`;
       });
     }
   });
 }
 
-fechaBase = new Date();
+function toggleEvento(i,e){
+  e.stopPropagation();
+  if(eventosSeleccionados.includes(i)){
+    eventosSeleccionados = eventosSeleccionados.filter(x=>x!==i);
+  }else{
+    eventosSeleccionados.push(i);
+  }
+  generarSemana();
+}
+
+function eliminarSeleccionados(){
+  eventos = eventos.filter((_,i)=> !eventosSeleccionados.includes(i));
+  eventosSeleccionados=[];
+  localStorage.setItem('eventos', JSON.stringify(eventos));
+  generarSemana();
+}
+
+fechaBase=new Date();
 generarSemana();
 </script>
 </body>
