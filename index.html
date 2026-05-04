@@ -3,22 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agenda Semanal PRO FINAL</title>
+<title>Agenda Semanal PRO+</title>
 <style>
 body{font-family:Arial;background:#0f172a;color:white;margin:0}
 .container{width:90%;margin:auto;padding:10px}
 .card{background:#1e293b;padding:10px;border-radius:15px;margin-bottom:10px}
 .headerSemana{text-align:center;margin-bottom:10px;font-weight:bold}
-.week{display:flex;gap:5px}
+.week{display:flex;justify-content:space-between;gap:5px}
 .day{background:#334155;padding:8px;border-radius:10px;flex:1;text-align:center;cursor:pointer}
 .day.selected{background:#22c55e}
 .nombreDia{font-size:10px;color:#94a3b8}
 .numeroDia{font-size:16px;font-weight:bold}
 .event{font-size:10px;margin-top:4px;padding:4px;border-radius:5px}
-.event.selected{outline:2px solid red}
+.event.selected{outline:2px solid #ef4444}
 button{padding:8px;border:none;border-radius:8px;background:#22c55e;color:white}
-.nav{display:flex;justify-content:space-between;margin-bottom:10px}
+.nav{display:flex;justify-content:space-between;margin-bottom:10px;gap:6px}
 input,select{width:100%;padding:10px;margin:5px 0;border:none;border-radius:8px}
+.badge{font-size:10px;opacity:.8}
 </style>
 </head>
 <body>
@@ -45,15 +46,20 @@ input,select{width:100%;padding:10px;margin:5px 0;border:none;border-radius:8px}
     <option value="otro">Otro</option>
   </select>
   <select id="tipo">
-    <option value="unico">Único</option>
-    <option value="semanal">Semanal</option>
-    <option value="diario">Diario</option>
+    <option value="unico">Solo este/estos días</option>
+    <option value="semanal">Repetir semanal</option>
+    <option value="diario">Repetir diario</option>
   </select>
-  <button onclick="agregarEvento()">Guardar</button>
+  <button style="width:100%" onclick="agregarEvento()">Guardar</button>
 </div>
 
 <div class="card">
-  <button onclick="eliminarSeleccionados()" style="background:red;width:100%">Eliminar seleccionados</button>
+  <h3>📌 Eventos del día</h3>
+  <div id="detalle"></div>
+</div>
+
+<div class="card">
+  <button style="width:100%;background:#ef4444" onclick="eliminarSeleccionados()">🗑️ Eliminar seleccionados</button>
 </div>
 
 </div>
@@ -63,6 +69,7 @@ let eventos = JSON.parse(localStorage.getItem('eventos')) || [];
 let fechaBase = new Date();
 let diasSeleccionados = [];
 let eventosSeleccionados = [];
+let diaActivo = null;
 
 const colores = {
   gym:'#22c55e',
@@ -71,14 +78,8 @@ const colores = {
   otro:'#a855f7'
 };
 
-const dias = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
-
-function formatearFecha(d){
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
+const nombresDias = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const nombresMeses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 function generarSemana(){
   const cont = document.getElementById('semana');
@@ -90,18 +91,19 @@ function generarSemana(){
   let fin = new Date(inicio);
   fin.setDate(inicio.getDate()+6);
 
-  document.getElementById('tituloSemana').innerText = `${formatearFecha(inicio)} - ${formatearFecha(fin)}`;
+  document.getElementById('tituloSemana').innerText =
+    `${inicio.getDate()} ${nombresMeses[inicio.getMonth()]} - ${fin.getDate()} ${nombresMeses[fin.getMonth()]} ${fin.getFullYear()}`;
 
   for(let i=0;i<7;i++){
     const d = new Date(inicio);
     d.setDate(inicio.getDate()+i);
 
-    const fecha = formatearFecha(d);
+    const fecha = d.toISOString().slice(0,10);
 
     const div = document.createElement('div');
     div.className = 'day';
     div.innerHTML = `
-      <div class="nombreDia">${dias[d.getDay()]}</div>
+      <div class="nombreDia">${nombresDias[d.getDay()]}</div>
       <div class="numeroDia">${d.getDate()}</div>
       <div id="e${fecha}"></div>
     `;
@@ -114,12 +116,15 @@ function generarSemana(){
         diasSeleccionados.push(fecha);
         div.classList.add('selected');
       }
+      diaActivo = fecha;
+      mostrarDetalle();
     }
 
     cont.appendChild(div);
   }
 
   mostrarEventos();
+  mostrarDetalle();
 }
 
 function cambiarSemana(dias){
@@ -138,19 +143,21 @@ function agregarEvento(){
   const tipo = document.getElementById('tipo').value;
   const categoria = document.getElementById('categoria').value;
 
-  if(diasSeleccionados.length===0) return alert("Elegí días");
+  if(diasSeleccionados.length===0) return alert("Elegí al menos un día");
+  if(!hora || !titulo) return alert("Completá todo");
 
   diasSeleccionados.forEach(fecha=>{
-    const diaSemana = diasSeleccionados.indexOf(fecha) !== -1 
-  ? new Date().getDay() 
-  : 0;
-
+    const diaSemana = new Date(fecha).getDay();
     eventos.push({fecha, hora, titulo, tipo, categoria, diaSemana});
   });
 
   localStorage.setItem('eventos', JSON.stringify(eventos));
-  diasSeleccionados=[];
+  diasSeleccionados = [];
   generarSemana();
+}
+
+function pintarEvento(e,i){
+  return `<div class="event ${eventosSeleccionados.includes(i)?'selected':''}" style="background:${colores[e.categoria]}" onclick="toggleEvento(${i}, event)">${e.hora} ${e.titulo}</div>`;
 }
 
 function mostrarEventos(){
@@ -164,48 +171,41 @@ function mostrarEventos(){
   eventos.forEach((e,i)=>{
     if(e.tipo==='unico'){
       if(!mapa[e.fecha]) mapa[e.fecha]=[];
-      mapa[e.fecha].push({...e,i});
+      mapa[e.fecha].push({...e, i});
     }
 
-   if(e.tipo==='semanal'){
-  for(let j=0;j<7;j++){
-    const d = new Date(inicio);
-    d.setDate(inicio.getDate()+j);
-
-    if(d.getDay() === e.diaSemana){
-      const f = formatearFecha(d);
-
+    if(e.tipo==='semanal'){
+      const d = new Date(inicio);
+      d.setDate(inicio.getDate() + (e.diaSemana === 0 ? 6 : e.diaSemana - 1));
+      const f = d.toISOString().slice(0,10);
       if(!mapa[f]) mapa[f]=[];
-      mapa[f].push({...e,i});
+      mapa[f].push({...e, i});
     }
-  }
-}
 
     if(e.tipo==='diario'){
       for(let j=0;j<7;j++){
         const d = new Date(inicio);
         d.setDate(inicio.getDate()+j);
-        const f = formatearFecha(d);
+        const f = d.toISOString().slice(0,10);
         if(!mapa[f]) mapa[f]=[];
-        mapa[f].push({...e,i});
+        mapa[f].push({...e, i});
       }
     }
   });
 
   Object.keys(mapa).forEach(fecha=>{
     mapa[fecha].sort((a,b)=> a.hora.localeCompare(b.hora));
-
     const box = document.getElementById('e'+fecha);
     if(box){
       mapa[fecha].forEach(ev=>{
-        box.innerHTML += `<div class="event ${eventosSeleccionados.includes(ev.i)?'selected':''}" style="background:${colores[ev.categoria]}" onclick="toggleEvento(${ev.i},event)">${ev.hora} ${ev.titulo}</div>`;
+        box.innerHTML += pintarEvento(ev, ev.i);
       });
     }
   });
 }
 
-function toggleEvento(i,e){
-  e.stopPropagation();
+function toggleEvento(i, ev){
+  ev.stopPropagation();
   if(eventosSeleccionados.includes(i)){
     eventosSeleccionados = eventosSeleccionados.filter(x=>x!==i);
   }else{
@@ -215,13 +215,38 @@ function toggleEvento(i,e){
 }
 
 function eliminarSeleccionados(){
+  if(eventosSeleccionados.length===0) return alert("No seleccionaste eventos");
   eventos = eventos.filter((_,i)=> !eventosSeleccionados.includes(i));
-  eventosSeleccionados=[];
+  eventosSeleccionados = [];
   localStorage.setItem('eventos', JSON.stringify(eventos));
   generarSemana();
 }
 
-fechaBase=new Date();
+function mostrarDetalle(){
+  const cont = document.getElementById('detalle');
+  cont.innerHTML = '';
+  if(!diaActivo) return;
+
+  eventos.forEach((e,i)=>{
+    if(e.fecha===diaActivo){
+      cont.innerHTML += `<div class="event" style="background:${colores[e.categoria]}">
+        ${e.hora} ${e.titulo} <span class="badge">(${e.tipo})</span>
+        <button onclick="editar(${i})">✏️</button>
+      </div>`;
+    }
+  });
+}
+
+function editar(i){
+  const nuevo = prompt('Editar título:', eventos[i].titulo);
+  if(nuevo){
+    eventos[i].titulo = nuevo;
+    localStorage.setItem('eventos', JSON.stringify(eventos));
+    generarSemana();
+  }
+}
+
+fechaBase = new Date();
 generarSemana();
 </script>
 </body>
