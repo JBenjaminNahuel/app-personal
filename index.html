@@ -141,9 +141,9 @@ function agregarEvento(){
   if(diasSeleccionados.length===0) return alert("Elegí días");
 
   diasSeleccionados.forEach(fecha=>{
-    const partes = fecha.split('-');
-    const d = new Date(partes[0], partes[1]-1, partes[2]);
-    const diaSemana = d.getDay();
+    const diaSemana = diasSeleccionados.indexOf(fecha) !== -1 
+  ? new Date().getDay() 
+  : 0;
 
     eventos.push({fecha, hora, titulo, tipo, categoria, diaSemana});
   });
