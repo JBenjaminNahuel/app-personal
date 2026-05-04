@@ -167,13 +167,19 @@ function mostrarEventos(){
       mapa[e.fecha].push({...e,i});
     }
 
-    if(e.tipo==='semanal'){
-      const d = new Date(inicio);
-      d.setDate(inicio.getDate() + (e.diaSemana===0?6:e.diaSemana-1));
+   if(e.tipo==='semanal'){
+  for(let j=0;j<7;j++){
+    const d = new Date(inicio);
+    d.setDate(inicio.getDate()+j);
+
+    if(d.getDay() === e.diaSemana){
       const f = formatearFecha(d);
+
       if(!mapa[f]) mapa[f]=[];
       mapa[f].push({...e,i});
     }
+  }
+}
 
     if(e.tipo==='diario'){
       for(let j=0;j<7;j++){
