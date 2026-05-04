@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agenda Semanal PRO+</title>
+<title>Agenda Semanal PRO+ (FIX FINAL)</title>
 <style>
 body{font-family:Arial;background:#0f172a;color:white;margin:0}
 .container{width:90%;margin:auto;padding:10px}
@@ -81,6 +81,13 @@ const colores = {
 const nombresDias = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const nombresMeses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
+function formatearFecha(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
 function generarSemana(){
   const cont = document.getElementById('semana');
   cont.innerHTML = "";
@@ -98,7 +105,7 @@ function generarSemana(){
     const d = new Date(inicio);
     d.setDate(inicio.getDate()+i);
 
-    const fecha = d.toISOString().slice(0,10);
+    const fecha = formatearFecha(d);
 
     const div = document.createElement('div');
     div.className = 'day';
@@ -147,7 +154,10 @@ function agregarEvento(){
   if(!hora || !titulo) return alert("Completá todo");
 
   diasSeleccionados.forEach(fecha=>{
-    const diaSemana = new Date(fecha).getDay();
+    const partes = fecha.split('-');
+    const d = new Date(partes[0], partes[1]-1, partes[2]);
+    const diaSemana = d.getDay();
+
     eventos.push({fecha, hora, titulo, tipo, categoria, diaSemana});
   });
 
@@ -175,18 +185,23 @@ function mostrarEventos(){
     }
 
     if(e.tipo==='semanal'){
-      const d = new Date(inicio);
-      d.setDate(inicio.getDate() + (e.diaSemana === 0 ? 6 : e.diaSemana - 1));
-      const f = d.toISOString().slice(0,10);
-      if(!mapa[f]) mapa[f]=[];
-      mapa[f].push({...e, i});
+      for(let j=0;j<7;j++){
+        const d = new Date(inicio);
+        d.setDate(inicio.getDate()+j);
+
+        if(d.getDay() === e.diaSemana){
+          const f = formatearFecha(d);
+          if(!mapa[f]) mapa[f]=[];
+          mapa[f].push({...e, i});
+        }
+      }
     }
 
     if(e.tipo==='diario'){
       for(let j=0;j<7;j++){
         const d = new Date(inicio);
         d.setDate(inicio.getDate()+j);
-        const f = d.toISOString().slice(0,10);
+        const f = formatearFecha(d);
         if(!mapa[f]) mapa[f]=[];
         mapa[f].push({...e, i});
       }
